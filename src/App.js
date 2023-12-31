@@ -1,6 +1,6 @@
 
 import './App.css';
-import React, { useReducer, useState, useEffect } from 'react';
+import React, { useReducer, useEffect } from 'react';
 import axios from 'axios';
 import socketIOClient from 'socket.io-client';
 import cryptoLogo from './img/1.jpg';
@@ -12,6 +12,7 @@ import cryptoLogo5 from './img/6.jpg';
 import cryptoLogo6 from './img/7.jpg';
 import cryptoLogo7 from './img/8.jpg';
 import cryptoLogo8 from './img/9.jpg';
+import { useCallback } from 'react';
 
 const initialState = {
   data: null,
@@ -64,28 +65,27 @@ const CryptoPrice = ({ data, currency }) => {
 
 const App = () => {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const { data, searchTerm, searchResults, loading, error, currency, searchClicked } = state;
-
-  const fetchData = async () => {
+  const {  searchTerm, searchResults, loading, error, currency, searchClicked } = state;
+  const fetchData = useCallback(async () => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'SET_ERROR', payload: null });
-
+  
       const response = await axios.get(
         'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,litecoin&vs_currencies=usd,eur'
       );
       const jsonData = response.data;
       dispatch({ type: 'SET_DATA', payload: jsonData });
-
+  
       if (searchTerm) {
         const filteredData = {};
-
+  
         Object.keys(jsonData).forEach((crypto) => {
           if (crypto.toLowerCase().includes(searchTerm.toLowerCase())) {
             filteredData[crypto] = jsonData[crypto];
           }
         });
-
+  
         dispatch({ type: 'SET_SEARCH_RESULTS', payload: filteredData });
       } else {
         dispatch({ type: 'SET_SEARCH_RESULTS', payload: null });
@@ -95,7 +95,7 @@ const App = () => {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  };
+  }, [dispatch, searchTerm]);
 
   const handleSearch = () => {
     if (searchTerm.trim() !== '') {
@@ -132,7 +132,7 @@ const App = () => {
     return () => {
       socket.disconnect();
     };
-  }, [searchTerm]);
+  },[searchTerm, fetchData]);
 
   return (
     <div>
