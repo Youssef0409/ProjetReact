@@ -1,9 +1,8 @@
 // App.tsx
 
 import './App.css';
-import React, { useReducer, useEffect, useCallback, Dispatch, SetStateAction } from 'react';
+import React, { useReducer, useEffect, useCallback} from 'react';
 import axios from 'axios';
-import socketIOClient from 'socket.io-client';
 import cryptoLogo from './img/1.jpg';
 import cryptoLogo1 from './img/2.jpg';
 import cryptoLogo2 from './img/3.jpg';
@@ -92,6 +91,7 @@ const CryptoPrice: React.FC<CryptoPriceProps> = ({ data, currency }) => {
 const App: React.FC = () => {
   const [state, dispatch] = useReducer<React.Reducer<State, Action>>(reducer, initialState);
   const { searchTerm, searchResults, loading, error, currency, searchClicked } = state;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [socket, setSocket] = useState<Socket | null>(null);
 
   const fetchData: FetchData = useCallback(async () => {
