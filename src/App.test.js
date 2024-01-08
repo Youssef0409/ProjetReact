@@ -2,7 +2,7 @@ import React from 'react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom/extend-expect';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import reducer from './App.js'; 
+import reducer from './App.tsx'; 
 import App from './App';   
 import axios from 'axios'; 
 

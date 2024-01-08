@@ -1,6 +1,7 @@
+// App.tsx
 
 import './App.css';
-import React, { useReducer, useEffect } from 'react';
+import React, { useReducer, useEffect, useCallback, Dispatch, SetStateAction } from 'react';
 import axios from 'axios';
 import socketIOClient from 'socket.io-client';
 import cryptoLogo from './img/1.jpg';
@@ -12,9 +13,34 @@ import cryptoLogo5 from './img/6.jpg';
 import cryptoLogo6 from './img/7.jpg';
 import cryptoLogo7 from './img/8.jpg';
 import cryptoLogo8 from './img/9.jpg';
-import { useCallback } from 'react';
+import { useState } from 'react';
+import { io, Socket } from 'socket.io-client';
 
-const initialState = {
+
+
+interface State {
+  data: Record<string, { usd: number; eur: number }> | null;
+  searchTerm: string;
+  searchResults: Record<string, { usd: number; eur: number }> | null;
+  loading: boolean;
+  error: string | null;
+  currency: 'usd' | 'eur';
+  searchClicked: boolean;
+}
+
+interface Action {
+  type: string;
+  payload: any;
+}
+
+interface CryptoPriceProps {
+  data: Record<string, { usd: number; eur: number }>;
+  currency: 'usd' | 'eur';
+}
+
+type FetchData = () => Promise<void>;
+
+const initialState: State = {
   data: null,
   searchTerm: '',
   searchResults: null,
@@ -24,7 +50,7 @@ const initialState = {
   searchClicked: false,
 };
 
-const reducer = (state, action) => {
+const reducer: React.Reducer<State, Action> = (state, action) => {
   switch (action.type) {
     case 'SET_DATA':
       return { ...state, data: action.payload };
@@ -45,7 +71,7 @@ const reducer = (state, action) => {
   }
 };
 
-const CryptoPrice = ({ data, currency }) => {
+const CryptoPrice: React.FC<CryptoPriceProps> = ({ data, currency }) => {
   return (
     <div>
       <h1 className="crypto-title">Crypto Prices</h1>
@@ -63,35 +89,40 @@ const CryptoPrice = ({ data, currency }) => {
   );
 };
 
-const App = () => {
-  const [state, dispatch] = useReducer(reducer, initialState);
-  const {  searchTerm, searchResults, loading, error, currency, searchClicked } = state;
-  const fetchData = useCallback(async () => {
+const App: React.FC = () => {
+  const [state, dispatch] = useReducer<React.Reducer<State, Action>>(reducer, initialState);
+  const { searchTerm, searchResults, loading, error, currency, searchClicked } = state;
+  const [socket, setSocket] = useState<Socket | null>(null);
+
+  const fetchData: FetchData = useCallback(async () => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'SET_ERROR', payload: null });
-  
+
       const response = await axios.get(
         'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,litecoin&vs_currencies=usd,eur'
       );
       const jsonData = response.data;
       dispatch({ type: 'SET_DATA', payload: jsonData });
-  
+
       if (searchTerm) {
-        const filteredData = {};
-  
+        const filteredData: Record<string, { usd: number; eur: number }> = {};
+
         Object.keys(jsonData).forEach((crypto) => {
           if (crypto.toLowerCase().includes(searchTerm.toLowerCase())) {
             filteredData[crypto] = jsonData[crypto];
           }
         });
-  
+
         dispatch({ type: 'SET_SEARCH_RESULTS', payload: filteredData });
       } else {
         dispatch({ type: 'SET_SEARCH_RESULTS', payload: null });
       }
     } catch (error) {
-      dispatch({ type: 'SET_ERROR', payload: "Une erreur s'est produite lors de la récupération des données." });
+      dispatch({
+        type: 'SET_ERROR',
+        payload: "Une erreur s'est produite lors de la récupération des données.",
+      });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
@@ -104,20 +135,21 @@ const App = () => {
     }
   };
 
-  const handleCurrencyChange = (selectedCurrency) => {
+  const handleCurrencyChange = (selectedCurrency: 'usd' | 'eur') => {
     dispatch({ type: 'SET_CURRENCY', payload: selectedCurrency });
   };
 
   useEffect(() => {
     fetchData();
 
-    const socket = socketIOClient('http://localhost:3001');
+    const socketConnection = io('http://localhost:3001');
+    setSocket(socketConnection);
 
-    socket.on('priceUpdate', (updatedData) => {
+    socketConnection.on('priceUpdate', (updatedData) => {
       dispatch({ type: 'SET_DATA', payload: updatedData });
 
       if (searchTerm) {
-        const filteredData = {};
+        const filteredData: Record<string, { usd: number; eur: number }> = {};
 
         Object.keys(updatedData).forEach((crypto) => {
           if (crypto.toLowerCase().includes(searchTerm.toLowerCase())) {
@@ -130,9 +162,9 @@ const App = () => {
     });
 
     return () => {
-      socket.disconnect();
+      socketConnection.disconnect();
     };
-  },[searchTerm, fetchData]);
+  }, [searchTerm, fetchData]);
 
   return (
     <div>
